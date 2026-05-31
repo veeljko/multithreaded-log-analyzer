@@ -1,0 +1,2 @@
+Ovaj fajl ne treba da bude obradjen jer nema .log ekstenziju.
+Ako se pojavi u statistici, scanner filtriranje ne radi dobro.

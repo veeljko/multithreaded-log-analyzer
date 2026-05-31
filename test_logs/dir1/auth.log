@@ -1,0 +1,4 @@
+1. 2026-05-29T00:01:01.000Z severity="INFO" User login ok
+2. 2026-05-29T00:01:02.000Z severity="WARNING" User login failed
+3. 2026-05-29T00:01:03.000Z severity="INFO" User logout ok
+4. 2026-05-29T00:01:04.000Z severity="ERROR" Permission denied

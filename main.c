@@ -7,16 +7,18 @@
 #include <string.h>
 #include <time.h>
 #include <semaphore.h>
+#include <limits.h>
 
 
 #define WORKER_CNT 6
 #define PRODUCER_CNT 100
 #define MAX_FILES 200
 #define MAX_PRODUCTS 200
-#define PATH_LEN 200
 #define TIMESTAMP_LEN 100
 #define LEVEL_LEN 20
 #define MESSAGE_LEN 500
+#define LAST_LINE_LEN 1024
+#define PATH_LEN PATH_MAX
 
 enum LOG_TYPE { ERROR, WARNING, INFO };
 struct logFile {
@@ -66,6 +68,9 @@ struct readFile readFiles[MAX_FILES] = {0};
 struct stats stats = {0};
 struct msgCount msgCount[MAX_FILES] = {0};
 
+volatile int running = 1;
+volatile int watching = 0;
+
 
 int isAdd(const char *input) {
     return strncmp(input, "add ", 4) == 0;
@@ -81,6 +86,10 @@ int isWatch(const char *input){
 
 int isStop(const char *input){
     return strcmp(input, "stop") == 0;
+}
+
+int isStats(const char *input){
+    return strcmp(input, "stats") == 0;
 }
 
 int isLog(const char *fileName) {
@@ -157,7 +166,7 @@ int checkLogFile(const char *path, struct logFile scannedFiles[]) {
 void* scanDir(void *arg) {
     char *path = (char *) arg;
 
-    while (1) {
+    while (running) {
         DIR *dir = opendir(path);
 
         if (dir == NULL) {
@@ -167,28 +176,41 @@ void* scanDir(void *arg) {
         }
 
         struct dirent *entry;
-        while (1){
+        while (running){
             while ((entry = readdir(dir)) != NULL) {
                 if (isLog(entry->d_name)) {
+                    // sleep(2);
                     char fullPath[PATH_LEN];
 
                     snprintf(fullPath, sizeof(fullPath), "%s/%s", path, entry->d_name);
 
-                    int status = checkLogFile(fullPath, scannedFiles);
+                    struct stat info;
+                    if (stat(fullPath, &info) == -1) {
+                        perror("stat");
+                        continue;
+                    }
 
-                    if (status == 1) {
-                        printf("Novi ili izmenjen log fajl: %s\n", fullPath);
-                        addProduct(fullPath);
+                    if (!S_ISREG(info.st_mode)) {
+                        continue;
+                    }
+
+                    if (isLog(entry->d_name)) {
+                        int status = checkLogFile(fullPath, scannedFiles);
+
+                        if (status == 1) {
+                            // printf("Novi ili izmenjen log fajl: %s\n", fullPath);
+                            addProduct(fullPath);
+                        }
                     }
                 }
             }
-            sleep(5);
+            // sleep(5);
             rewinddir(dir);
         }
 
         closedir(dir);
 
-        printf("Zavrseno skeniranje direktorijuma %s. Cekam 5 sekundi...\n", path);
+        // printf("Zavrseno skeniranje direktorijuma %s. Cekam 5 sekundi...\n", path);
         sleep(5);
     }
 
@@ -196,12 +218,11 @@ void* scanDir(void *arg) {
     return NULL;
 }
 
-int getStartLine(const char *path) {
-    pthread_mutex_lock(&readFilesMutex);
+int getOffsetIndex(const char *path) {
+
 
     for (int i = 0; i < MAX_FILES; i++) {
         if (readFiles[i].used && strcmp(path, readFiles[i].path) == 0) {
-            pthread_mutex_unlock(&readFilesMutex);
             return i;
         }
     }
@@ -212,7 +233,6 @@ int getStartLine(const char *path) {
             snprintf(readFiles[i].path, sizeof(readFiles[i].path), "%s", path);
             readFiles[i].offset = 0;
 
-            pthread_mutex_unlock(&readFilesMutex);
 
             pthread_mutex_lock(&statMutex);
             stats.cntFile++;
@@ -222,7 +242,6 @@ int getStartLine(const char *path) {
         }
     }
 
-    pthread_mutex_unlock(&readFilesMutex);
     return -1;
 }
 
@@ -295,6 +314,7 @@ void sortMessagesByCount(){
 }
 
 void topN(int n){
+    if (n > MAX_FILES) n = MAX_FILES;
     pthread_mutex_lock(&statMutex);
 
     sortMessagesByCount();
@@ -323,12 +343,95 @@ void updateStats(const struct logLine *log) {
     pthread_mutex_unlock(&statMutex);
 }
 
-void readFromLastPosition(const char *filePath, int index) {
-    if (index < 0) {
-        printf("Nema mesta u readFiles nizu za fajl: %s\n", filePath);
-        return;
+int getEndOffsetAndLastSeq(const char *filePath, long long *endOut, int *seqOut) {
+    FILE *file = fopen(filePath, "rb");
+
+    if (file == NULL) {
+        perror("fopen");
+        return -1;
     }
 
+    if (fseek(file, 0, SEEK_END) != 0) {
+        perror("fseek");
+        fclose(file);
+        return -1;
+    }
+
+    long end = ftell(file);
+
+    if (end <= 0) {
+        fclose(file);
+        return 0; // prazan fajl
+    }
+
+    *endOut = end;
+
+    while (end > 0) {
+        if (fseek(file, end - 1, SEEK_SET) != 0) {
+            perror("fseek");
+            fclose(file);
+            return -1;
+        }
+
+        int c = fgetc(file);
+
+        if (c == '\n' || c == '\r') {
+            end--;
+        } else {
+            break;
+        }
+    }
+
+    if (end == 0) {
+        fclose(file);
+        return 0;
+    }
+
+    long start = end;
+
+    while (start > 0) {
+        if (fseek(file, start - 1, SEEK_SET) != 0) {
+            perror("fseek");
+            fclose(file);
+            return -1;
+        }
+
+        int c = fgetc(file);
+
+        if (c == '\n') {
+            break;
+        }
+
+        start--;
+    }
+
+    long len = end - start;
+
+    char line[LAST_LINE_LEN];
+
+    if (len >= LAST_LINE_LEN) {
+        len = LAST_LINE_LEN - 1;
+    }
+
+    if (fseek(file, start, SEEK_SET) != 0) {
+        perror("fseek");
+        fclose(file);
+        return -1;
+    }
+
+    size_t readBytes = fread(line, 1, len, file);
+    line[readBytes] = '\0';
+
+    fclose(file);
+
+    if (sscanf(line, "%d.", seqOut) == 1) {
+        return 1;
+    }
+
+    return -1;
+}
+
+void readFromLastPosition(const char *filePath, long long offset, int seq) {
     FILE *file = fopen(filePath, "r");
 
     if (file == NULL) {
@@ -336,36 +439,39 @@ void readFromLastPosition(const char *filePath, int index) {
         return;
     }
 
-    pthread_mutex_lock(&readFilesMutex);
-    long long offset = readFiles[index].offset;
-    pthread_mutex_unlock(&readFilesMutex);
-
-    fseek(file, offset, SEEK_SET);
+    if (fseek(file, offset, SEEK_SET) != 0) {
+        perror("fseek");
+        fclose(file);
+        return;
+    }
 
     char line[1024];
 
     while (fgets(line, sizeof(line), file) != NULL) {
+        // sleep(2);
         struct logLine log;
 
         if (parseLogLine(line, &log)) {
             updateStats(&log);
+
+            if (log.seqNo == seq) {
+                break;
+            }
         } else {
             printf("Neispravna log linija u fajlu %s: %s", filePath, line);
         }
     }
 
-    long long newOffset = ftell(file);
-
-    pthread_mutex_lock(&readFilesMutex);
-    readFiles[index].offset = newOffset;
-    pthread_mutex_unlock(&readFilesMutex);
-
     fclose(file);
 }
 
 void* worker(void* args) {
-    while (1) {
+    while (running) {
         sem_wait(&sem);
+
+        if (!running) {
+            break;
+        }
 
         pthread_mutex_lock(&productsMutex);
 
@@ -376,23 +482,58 @@ void* worker(void* args) {
 
         pthread_mutex_unlock(&productsMutex);
 
-        printf("Worker obradjuje fajl: %s\n", filePath);
+        pthread_mutex_lock(&readFilesMutex);
 
-        // Ovde kasnije ide prava obrada fajla.
-        int offsetIndex = getStartLine(filePath);
-        readFromLastPosition(filePath, offsetIndex);
+        int offsetIndex = getOffsetIndex(filePath);
 
+        if (offsetIndex == -1) {
+            pthread_mutex_unlock(&readFilesMutex);
+            printf("Nema mesta u readFiles za fajl: %s\n", filePath);
+            continue;
+        }
+
+        long long oldOffset = readFiles[offsetIndex].offset;
+
+        long long newOffset;
+        int seq;
+
+        int result = getEndOffsetAndLastSeq(filePath, &newOffset, &seq);
+
+        if (result != 1) {
+            pthread_mutex_unlock(&readFilesMutex);
+            continue;
+        }
+
+        if (newOffset < oldOffset) {
+            oldOffset = 0;
+        }
+
+        if (newOffset == oldOffset) {
+            pthread_mutex_unlock(&readFilesMutex);
+            continue;
+        }
+
+        readFiles[offsetIndex].offset = newOffset;
+
+        pthread_mutex_unlock(&readFilesMutex);
+
+        // printf("Worker obradjuje fajl: %s od offseta %lld do offseta %lld, seqNo=%d\n",
+        //        filePath, oldOffset, newOffset, seq);
+
+        readFromLastPosition(filePath, oldOffset, seq);
     }
 
     return NULL;
 }
-
 void* watch(void *args){
-    while (1){
+
+    while (running && watching){
         system("clear");
         printStats();
         sleep(1);
     }
+
+    return NULL;
 }
 
 int main() {
@@ -405,7 +546,9 @@ int main() {
         pthread_create(&workers[i], NULL, worker, NULL);
     }
 
-    while (1) {
+
+    int watchStarted = 0;
+    while (running) {
         if (fgets(input, sizeof(input), stdin) == NULL) {
             break;
         }
@@ -431,8 +574,24 @@ int main() {
             pthread_create(&producers[prodInd], NULL, scanDir, (void *)pathCopy);
             prodInd++;
         }
-        else if (isWatch(input)){
-            pthread_create(&watchThread, NULL, watch, NULL);
+        else if (isWatch(input)) {
+            if (!watchStarted) {
+                watching = 1;
+                pthread_create(&watchThread, NULL, watch, NULL);
+                watchStarted = 1;
+
+                while (running) {
+                    if (fgets(input, sizeof(input), stdin) == NULL) {
+                        clearerr(stdin);
+                        break;
+                    }
+                }
+
+                watching = 0;
+                pthread_join(watchThread, NULL);
+                watchStarted = 0;
+                system("clear");
+            }
         }
         else if (isTop(input)){
             int n;
@@ -446,14 +605,26 @@ int main() {
             topN(n);
         }
         else if (isStop(input)){
-            break;
+            running = 0;
+            for (int i = 0; i < WORKER_CNT; i++) {
+                sem_post(&sem);
+            }
+        }
+        else if (isStats(input)){
+            printStats();
         }
     }
 
+
+    for (int i = 0; i < WORKER_CNT; i++) {
+        pthread_join(workers[i], NULL);
+    }
     for (int i = 0; i < prodInd; i++) {
         pthread_join(producers[i], NULL);
     }
-    pthread_join(watchThread, NULL);
+    if (watchStarted) {
+        pthread_join(watchThread, NULL);
+    };
 
     pthread_mutex_destroy(&statMutex);
     pthread_mutex_destroy(&scannedFilesMutex);
