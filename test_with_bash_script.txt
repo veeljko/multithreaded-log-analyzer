@@ -1,0 +1,19 @@
+U terminalu:
+bash test_program.sh
+
+Test sada provjerava:
+
+- make clean i make
+- add za prvi direktorijum
+- stats poslije prvog log fajla
+- top 5
+- add za drugi direktorijum
+- obradu vise direktorijuma
+- ignorisanje .csv fajla
+- ignorisanje log fajla iz poddirektorijuma
+- dopisivanje u postojeci log fajl
+- dodavanje novog .log fajla tokom rada programa
+- finalne brojeve za ERROR, WARNING, INFO
+- finalni top za najcesce poruke
+
+Traje oko 20-ak sekundi jer scanner nit po zadatku ceka 5 sekundi izmedju obilazaka direktorijuma.
