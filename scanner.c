@@ -54,8 +54,7 @@ void* scanDir(void *arg) {
 
         if (dir == NULL) {
             printf("Ne mogu da otvorim direktorijum: %s\n", path);
-            sleep(5);
-            continue;
+            break;
         }
 
         struct dirent *entry;

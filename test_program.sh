@@ -161,7 +161,7 @@ echo "Svi automatizovani testovi su prosli."
 echo
 echo "Rucni watch test:"
 echo "1. Pokreni: make run"
-echo "2. Unesi: add $LOG_DIR_1"
+echo "2. Unesi: add test_logs/dir1/"
 echo "3. Sacekaj nekoliko sekundi, pa unesi: watch"
 echo "4. Iz watch rezima izadji sa CTRL+D"
 echo "5. Unesi: stop"
