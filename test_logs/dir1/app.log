@@ -1,5 +1,5 @@
 1. 2026-05-29T00:00:01.000Z severity="INFO" User login ok
 2. 2026-05-29T00:00:02.000Z severity="ERROR" Connection timeout
 3. 2026-05-29T00:00:03.000Z severity="WARNING" Disk almost full
-4. 2026-05-29T00:00:04.000Z severity="INFO" Connection timeout
+4. 2026-05-29T00:00:04.000Z severity="INFO" User login ok
 5. 2026-05-29T00:00:05.000Z severity="ERROR" User login failed

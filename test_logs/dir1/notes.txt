@@ -1,2 +1,2 @@
-Ovaj fajl ne treba da bude obradjen jer nema .log ekstenziju.
-Ako se pojavi u statistici, scanner filtriranje ne radi dobro.
+1. 2026-05-29T00:02:01.000Z severity="ERROR" Txt log processed
+2. 2026-05-29T00:02:02.000Z severity="INFO" Txt log processed

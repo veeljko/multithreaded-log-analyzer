@@ -1,0 +1,4 @@
+1. 2026-05-29T00:01:01.000Z severity="INFO" Job scheduled
+2. 2026-05-29T00:01:02.000Z severity="WARNING" Queue delayed
+3. 2026-05-29T00:01:03.000Z severity="ERROR" Connection timeout
+4. 2026-05-29T00:01:04.000Z severity="INFO" User login failed

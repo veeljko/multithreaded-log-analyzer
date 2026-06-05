@@ -1,0 +1,6 @@
+1. 2026-05-29T00:03:01.000Z severity="INFO" Connection timeout
+2. 2026-05-29T00:03:02.000Z severity="ERROR" Connection timeout
+3. 2026-05-29T00:03:03.000Z severity="WARNING" API slow
+4. 2026-05-29T00:03:04.000Z severity="WARNING" Queue delayed
+5. 2026-05-29T00:03:05.000Z severity="INFO" Worker started
+6. 2026-05-29T00:03:06.000Z severity="INFO" Health check ok

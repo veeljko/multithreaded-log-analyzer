@@ -1,0 +1,3 @@
+4. 2026-05-29T00:04:04.000Z severity="INFO" Batch started
+5. 2026-05-29T00:04:05.000Z severity="INFO" Retry finished
+6. 2026-05-29T00:04:06.000Z severity="ERROR" Second failure
