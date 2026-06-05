@@ -77,13 +77,11 @@ void* scanDir(void *arg) {
                         continue;
                     }
 
-                    if (isLog(entry->d_name)) {
-                        int status = checkLogFile(fullPath, scannedFiles);
+                    int status = checkLogFile(fullPath, scannedFiles);
 
-                        if (status == 1) {
-                            // printf("Novi ili izmenjen log fajl: %s\n", fullPath);
-                            addProduct(fullPath);
-                        }
+                    if (status == 1) {
+                        // printf("Novi ili izmenjen log fajl: %s\n", fullPath);
+                        addProduct(fullPath);
                     }
                 }
             }
@@ -93,8 +91,6 @@ void* scanDir(void *arg) {
 
         closedir(dir);
 
-        // printf("Zavrseno skeniranje direktorijuma %s. Cekam 5 sekundi...\n", path);
-        sleep(5);
     }
 
     free(path);
