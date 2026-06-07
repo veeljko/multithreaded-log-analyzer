@@ -82,6 +82,8 @@ void updateStats(const struct logLine *log) {
     }
 
     updateMessages(log->message);
-
+    if (stats.cntError == 11){
+        printf("Skenirano vise od 10 Error-a!\n");
+    }
     pthread_mutex_unlock(&statMutex);
 }

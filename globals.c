@@ -11,6 +11,7 @@ pthread_mutex_t scannedFilesMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t productsMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t readFilesMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t statMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t cntMutex = PTHREAD_MUTEX_INITIALIZER;
 
 sem_t emptySlots;
 sem_t fullSlots;

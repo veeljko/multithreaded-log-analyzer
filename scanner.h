@@ -3,5 +3,6 @@
 
 int checkLogFile(const char *path, struct logFile scannedFiles[]);
 void* scanDir(void *arg);
+int getCntScanner();
 
 #endif

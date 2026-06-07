@@ -3,6 +3,16 @@
 #include "queue.h"
 #include "scanner.h"
 
+int cntScanner = 0;
+
+int getCntScanner(){
+    int r;
+    pthread_mutex_lock(&cntMutex);
+    r = cntScanner;
+    pthread_mutex_unlock(&cntMutex);
+    return r;
+}
+
 int checkLogFile(const char *path, struct logFile scannedFiles[]) {
     struct stat info;
 
@@ -47,6 +57,9 @@ int checkLogFile(const char *path, struct logFile scannedFiles[]) {
 }
 
 void* scanDir(void *arg) {
+    pthread_mutex_lock(&cntMutex);
+    cntScanner++;
+    pthread_mutex_unlock(&cntMutex);
     char *path = (char *) arg;
 
     while (atomic_load(&running)) {
@@ -93,5 +106,8 @@ void* scanDir(void *arg) {
     }
 
     free(path);
+    pthread_mutex_lock(&cntMutex);
+    cntScanner--;
+    pthread_mutex_unlock(&cntMutex);
     return NULL;
 }

@@ -71,6 +71,7 @@ extern pthread_mutex_t scannedFilesMutex;
 extern pthread_mutex_t productsMutex;
 extern pthread_mutex_t readFilesMutex;
 extern pthread_mutex_t statMutex;
+extern pthread_mutex_t cntMutex;
 
 extern sem_t emptySlots;
 extern sem_t fullSlots;

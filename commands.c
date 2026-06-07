@@ -1,6 +1,10 @@
 #include "common.h"
 #include "commands.h"
 
+int isNoScanner(const char *input) {
+    return strcmp(input, "noscanner") == 0;
+}
+
 int isAdd(const char *input) {
     return strncmp(input, "add ", 4) == 0;
 }

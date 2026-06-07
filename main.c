@@ -98,6 +98,9 @@ int main() {
         else if (isStats(input)){
             printStats();
         }
+        else if (isNoScanner(input)){
+            printf("Broj pokrenutih scanner niti je: %d\n", getCntScanner());
+        }
     }
 
 
@@ -114,5 +117,6 @@ int main() {
     pthread_mutex_destroy(&statMutex);
     pthread_mutex_destroy(&scannedFilesMutex);
     pthread_mutex_destroy(&readFilesMutex);
+    pthread_mutex_destroy(&cntMutex);
     return 0;
 }
